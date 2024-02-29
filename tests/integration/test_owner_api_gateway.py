@@ -3,7 +3,7 @@ import os
 import boto3
 import pytest
 import requests
-
+import os
 """
 Make sure env variable AWS_SAM_STACK_NAME exists with the name of the stack we are going to test. 
 """
@@ -13,13 +13,14 @@ class TestApiGateway:
 
     @pytest.fixture()
     def api_gateway_url(self):
-       return "https://llnmq566ea.execute-api.us-east-1.amazonaws.com/live/"
+       return os.environ["VAULT_API_URL"]
+
 
     def test_api_gateway_store(self, api_gateway_url):
         """ Call the API Gateway endpoint and check the response """
         response = requests.post(api_gateway_url, json={
             "elements": {
-                "givename":{
+                "givenname":{
                     "value":"my name", "classification":"name"},
                 "contact1":{
                     "value":"email@other.com", "classification":"email"}}})
