@@ -27,22 +27,23 @@ class TestApiGateway:
 
         assert response.status_code == 200
         body = response.json()
-        validate_alias_in_body_data_elements(body, "elements", "givenname")
-        validate_alias_in_body_data_elements(body, "elements", "contact1")
+        given_name = validate_alias_in_body_data_elements(body, "elements", "givenname")
+        validate_token_in_element(given_name)
+        contact = validate_alias_in_body_data_elements(body, "elements", "contact1")
+        validate_token_in_element(contact)
 
 
     def test_api_gateway_remove(self, api_gateway_url):
         """ Call the API Gateway endpoint and check the response """
         data_tokens = self.invoke_store_data(api_gateway_url, "givenname", "givenname", "name")
         data_element = validate_alias_in_data_elements(data_tokens, "givenname")
-        
-        assert "token" in data_element , f"Expected token but got on response data element: {data_element}"
+        token = validate_token_in_element(data_element)
         
         response = requests.patch(api_gateway_url, json={
             "elements": {
-                "givenname": data_element["token"]}})
+                "givenname": token}})
 
-        assert response.status_code == 200
+        assert response.status_code == 200, f"Response: {response.content}"
         body = response.json()
         data_element = validate_alias_in_body_data_elements(body,'elements', "givenname")
 
@@ -67,3 +68,6 @@ def validate_alias_in_data_elements(data_elements, alias):
     assert alias in data_elements
     return data_elements[alias]
 
+def validate_token_in_element(element):
+    assert "token" in element
+    return element["token"]
