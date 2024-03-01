@@ -23,10 +23,13 @@ class TestApiGateway:
                 "givenname":{
                     "value":"my name", "classification":"name"},
                 "contact1":{
-                    "value":"email@other.com", "classification":"email"}}})
+                    "value":"email@other.com", "classification":"email"},
+                "phone1":{
+                        "value":"+521234567890", "classification":"phone"}}})
 
         assert response.status_code == 200
         body = response.json()
+
         given_name = validate_alias_in_body_data_elements(body, "elements", "givenname")
         validate_token_in_element(given_name)
         contact = validate_alias_in_body_data_elements(body, "elements", "contact1")
@@ -36,6 +39,7 @@ class TestApiGateway:
     def test_api_gateway_remove(self, api_gateway_url):
         """ Call the API Gateway endpoint and check the response """
         data_tokens = self.invoke_store_data(api_gateway_url, "givenname", "givenname", "name")
+
         data_element = validate_alias_in_data_elements(data_tokens, "givenname")
         token = validate_token_in_element(data_element)
         
@@ -46,15 +50,18 @@ class TestApiGateway:
         assert response.status_code == 200, f"Response: {response.content}"
         body = response.json()
         data_element = validate_alias_in_body_data_elements(body,'elements', "givenname")
+        assert "success" in data_element, f"Data element: {data_element}"
+        assert data_element["success"] == True
 
 
     def invoke_store_data(self, api_gateway_url, alias, value, classification):
-        data_elements = {}
+        data_elements = dict()
         data_elements[alias] = {"value":value, "classification":classification}
         response = requests.post(api_gateway_url, json={
             "elements": data_elements})
 
         assert response.status_code == 200
+
         body = response.json()
         validate_alias_in_body_data_elements(body,"elements", alias)
         return body["elements"]
@@ -65,7 +72,7 @@ def validate_alias_in_body_data_elements(body, container, alias):
     return validate_alias_in_data_elements(data_elements, alias)
 
 def validate_alias_in_data_elements(data_elements, alias):
-    assert alias in data_elements
+    assert alias in data_elements, f"Alias: {alias}, Data elements: {data_elements}"
     return data_elements[alias]
 
 def validate_token_in_element(element):

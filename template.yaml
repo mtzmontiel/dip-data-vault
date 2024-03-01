@@ -12,7 +12,7 @@ Globals:
     TracingEnabled: true
 Resources:
   VaultFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Type: AWS::Serverless::Function
     Properties:
       CodeUri: data_vault/
       Handler: owner.lambda_handler
@@ -21,7 +21,7 @@ Resources:
       - x86_64
       Events:
         DataStore:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Type: Api
           Properties:
             Path: /
             Method: post
