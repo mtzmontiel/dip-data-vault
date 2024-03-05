@@ -11,12 +11,33 @@ Globals:
   Api:
     TracingEnabled: true
 Resources:
+  VaultTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      PrimaryKey:
+        Name: pk
+        Type: String
+      # Not setting ProvisionedThroughput as this is a test and we do not expect load. 
+      # This could be different in a real world scenario.
   VaultFunction:
     Type: AWS::Serverless::Function
+    Connectors:
+      MyTableConn:
+        Properties:
+          Destination:
+            Id: VaultTable
+          Permissions:
+            - Read
+            - Write
     Properties:
       CodeUri: data_vault/
       Handler: owner.lambda_handler
       Runtime: python3.11
+      Environment:
+        Variables:
+          # This is the DynamoDB table name
+          TABLE_NAME:
+            Ref: VaultTable
       Architectures:
       - x86_64
       Events:
