@@ -46,8 +46,37 @@ Resources:
           Properties:
             Path: /
             Method: post
+            RestApiId:
+              Ref: PublicApi
         DataRemove:
           Type: Api
           Properties:
             Path: /
             Method: patch
+            RestApiId:
+              Ref: PublicApi
+  PublicApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        Authorizers:
+          UserAuth:
+            FunctionArn: !GetAtt UserAuthorizerFunction.Arn
+            FunctionPayloadType: REQUEST
+            Identity:
+              Headers:
+                - authorization
+        DefaultAuthorizer: UserAuth
+  UserAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: authorizer/
+      Handler: authorizer.authorizer_handler
+      Runtime: python3.11
+      Architectures:
+      - x86_64
+Outputs:
+  APIGatewayEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${PublicApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
