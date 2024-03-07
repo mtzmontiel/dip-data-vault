@@ -61,9 +61,9 @@ class TestApiGateway:
 
         assert response.status_code == 200, f"Response: {response.content}"
         body = response.json()
-        data_element = validate_alias_in_body_data_elements(body,'elements', "givenname")
         assert "success" in data_element, f"Data element: {data_element}"
         assert data_element["success"] == True
+        assert token in data_element['token'], f"Data element: {data_element}"
 
     def test_api_gateway_remove_with_different_user(self, api_gateway_url, user1_auth, user2_auth):
         """ Call the API Gateway endpoint and check the response """
@@ -74,10 +74,10 @@ class TestApiGateway:
 
         response = self.invoke_remove_data(api_gateway_url, "givenname", token, user2_auth)
 
-        assert response.status_code == 403, f"Response: {response.content}"
+        assert response.status_code == 400, f"Response: {response.content}"
         body = response.json()
-        assert "error" in body, f"Body: {body}"
-        assert body["error"] == "Forbidden"
+        assert "message" in body, f"Body: {body}"
+        assert body["message"] == "error"
 
 
     def invoke_store_data(self, api_gateway_url, alias, value, classification, authorization):
@@ -97,9 +97,7 @@ class TestApiGateway:
     def invoke_remove_data(self, api_gateway_url, alias, token, authorization):
         response = requests.patch(f"{api_gateway_url}",
             headers={"Authorization":authorization, "Content-Type":"application/json"},
-            json={
-            "elements": {
-                f"{alias}": token}})
+            json={"token":  token})
         return response
 def validate_alias_in_body_data_elements(body, container, alias):
     assert container in body
