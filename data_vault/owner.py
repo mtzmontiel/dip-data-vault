@@ -3,9 +3,14 @@ import os
 import uuid
 import boto3
 import botocore
+from dynamodb_encryption_sdk.material_providers import CryptographicMaterialsProvider
+from dynamodb_encryption_sdk.encrypted.table import EncryptedTable
+from dynamodb_encryption_sdk.structures import AttributeActions
+from dynamodb_encryption_sdk.identifiers import CryptoAction
+from dynamodb_encryption_sdk.material_providers.aws_kms import AwsKmsCryptographicMaterialsProvider
 
-def create_table(table_name):
-    return create_table_without_encryption(table_name)
+def create_table(table_name, key_id):
+    return create_secure_table(table_name, key_id)
 
 def ddb():
     return boto3.resource('dynamodb')
@@ -13,8 +18,25 @@ def ddb():
 def create_table_without_encryption(table_name):
     return ddb().Table(table_name)
 
+def create_secure_table(table_name, key_id):
+    materials_provider = create_materials_provider(key_id)
+    return create_encrypted_table(table_name, materials_provider)
+
+def create_materials_provider(key_id):
+    return AwsKmsCryptographicMaterialsProvider(key_id)
+
+def create_encrypted_table(table_name, materials_provider):
+    table = boto3.resource('dynamodb').Table(table_name)
+    attribute_actions = AttributeActions(
+        default_action=CryptoAction.DO_NOTHING,
+        attribute_actions={
+            'enc_value': CryptoAction.ENCRYPT_AND_SIGN
+        }
+    )
+    return EncryptedTable(table, materials_provider, attribute_actions=attribute_actions)
+
 res = ddb()
-table = create_table(os.environ["TABLE_NAME"])
+table = create_table(os.environ["TABLE_NAME"], os.environ["KEY_ID"])
 
 
 def lambda_handler(event, context):
@@ -42,9 +64,9 @@ def store_data(event, context):
         ddresult = table.put_item(Item={
                 "pk": get_pk(principal_id, token), 
                 "owned_by":principal_id, 
-                "token": token, 
-                # NOT STORING RIGHT NOW AS IT IS UNSAFE. Right? :) 
-                # "value": v
+                "token": token,
+                "data_class": v["classification"],
+                "enc_value": v["value"] 
             })
         if ddresult["ResponseMetadata"]["HTTPStatusCode"] != 200:
             results[k] = dict()
