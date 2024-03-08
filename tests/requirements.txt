@@ -2,3 +2,4 @@ pytest
 boto3
 requests
 pyjwt
+dynamodb-encryption-sdk

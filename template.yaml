@@ -19,25 +19,66 @@ Resources:
         Type: String
       # Not setting ProvisionedThroughput as this is a test and we do not expect load. 
       # This could be different in a real world scenario.
+  VaultLambdaRole:
+    Type: AWS::IAM::Role
+    Properties: 
+      Description: String
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Policies:
+        - PolicyName: KMS
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - 'kms:Encrypt'
+                  - 'kms:Decrypt'
+                  - 'kms:GenerateDataKey*'
+                Resource: !GetAtt KmsKey.Arn
+        - PolicyName: DynamoDb
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - 'dynamodb:PutItem'
+                  - 'dynamodb:UpdateItem'
+                  - 'dynamodb:DeleteItem'
+                  - 'dynamodb:DescribeTable'
+                  - 'dynamodb:GetItem'
+                Resource: !GetAtt VaultTable.Arn
+        - PolicyName: Cloudwatch
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action: 
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                Resource: '*'
+
   VaultFunction:
     Type: AWS::Serverless::Function
-    Connectors:
-      MyTableConn:
-        Properties:
-          Destination:
-            Id: VaultTable
-          Permissions:
-            - Read
-            - Write
     Properties:
       CodeUri: data_vault/
       Handler: owner.lambda_handler
       Runtime: python3.11
+      Role: !GetAtt VaultLambdaRole.Arn
       Environment:
         Variables:
-          # This is the DynamoDB table name
           TABLE_NAME:
             Ref: VaultTable
+          KEY_ID: 
+            Ref: KmsKey
       Architectures:
       - x86_64
       Events:
@@ -76,6 +117,25 @@ Resources:
       Runtime: python3.11
       Architectures:
       - x86_64
+  KmsKey:
+    Type: AWS::KMS::Key
+    Properties: 
+      Description: Encryption key form Private Data Vault
+      Enabled: true
+      EnableKeyRotation: true
+      KeySpec: SYMMETRIC_DEFAULT
+      MultiRegion: false
+      KeyPolicy: 
+        Version: 2012-10-17
+        Id: key-default-1
+        Statement:
+          - Sid: "Enable Root User Permissions"
+            Effect: Allow
+            Principal: 
+              AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root"
+            Action: "kms:*"
+            Resource: "*"
+
 Outputs:
   APIGatewayEndpoint:
     Description: "API Gateway endpoint URL for Prod stage"
