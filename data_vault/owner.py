@@ -107,6 +107,31 @@ def remove_data(event, context):
         
     return results, None
 
+def get_data(event, context):
+    """Get private data by tokens"""
+    principal_id = extract_principal_id(event)
+    results = dict()
+    token = extract_token(event)
+    results["token"] = token
+    try:
+        ddresult = table.get_item(Key={"pk": get_pk(principal_id, token)},
+                                    ConditionExpression="owned_by = :val",
+                                    ExpressionAttributeValues={":val": principal_id})
+        if ddresult["ResponseMetadata"]["HTTPStatusCode"] != 200:
+            results["success"] = False
+            results["message"] = "Could not process request."
+        else:
+            results["success"] = True
+            results["message"] = "Successfully Retrieved"
+            results["data"] = ddresult["Item"]["enc_data"]
+            results["data_class"] = ddresult["Item"]["data_class"]
+    except res.meta.client.exceptions.ConditionalCheckFailedException as e:
+        results["success"] = False
+        results["message"] = "Could not process request"
+        return results, e
+
+    return results, None
+
 def extract_principal_id(event):
     return event["requestContext"]["authorizer"]["principalId"]
 
